@@ -12,7 +12,7 @@ class EnvService:
 
     @staticmethod
     def check_all_required_nextprot_envs():
-        np_var_names = ["NP_SCRIPTS_HOME", "NP_LOADERS_HOME", "NP_CV_HOME", "NP_PERL_PARSERS_HOME", "PERL5LIB"]
+        np_var_names = ["PY_INTEGRATION_HOME", "NP_LOADERS_HOME", "NP_CV_HOME", "NP_PERL_PARSERS_HOME", "PERL5LIB"]
         EnvService.check_envs(np_var_names)
 
     @staticmethod
@@ -25,8 +25,8 @@ class EnvService:
                 raise OSError("OS environment variable '"+var_name + "' has to be set.")
 
     @staticmethod
-    def get_np_scripts_home():
-        return os.getenv("NP_SCRIPTS_HOME")
+    def get_py_integration_home():
+        return os.getenv("PY_INTEGRATION_HOME")
 
     @staticmethod
     def get_np_loaders_home():

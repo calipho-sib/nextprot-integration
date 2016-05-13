@@ -48,7 +48,7 @@ class TestSoftwareCheckr(TestCase):
 
     def test_all(self):
         EnvService.check_all_required_nextprot_envs()
-        self.assertIsNotNone(EnvService.get_np_scripts_home())
+        self.assertIsNotNone(EnvService.get_py_integration_home())
         self.assertIsNotNone(EnvService.get_np_loaders_home())
         self.assertIsNotNone(EnvService.get_np_dataload_prop_filename())
         self.assertIsNotNone(EnvService.get_np_perl_parsers_home())
