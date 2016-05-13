@@ -46,18 +46,24 @@ class ShellResult(object):
 class BashService:
     """utilitary methods to help around bash command execution
     """
+    # TODO: remove this HACK !!!!
+    # HACK: while setting virtualenv, PATH was modified losing my current profile settings
+    os.environ["PATH"] += os.pathsep + "/Users/fnikitin/Applications/apache-ant-1.9.7/bin"
+    os.environ["PATH"] += os.pathsep + "/Users/fnikitin/Applications/apache-maven-3.2.3/bin"
+    os.environ["PATH"] += os.pathsep + "/Applications/Postgres.app/Contents/MacOS/bin"
+
     def __init__(self):
         pass
 
     @staticmethod
-    def exec_bash(bash_command, swap_output_error=False, shell=True):
+    def exec_bash(bash_command, swap_output_error=False):
         logging.info("exec " + os.path.expandvars(bash_command))
 
         # Note about explicit shell invocation:
         # Invoking the shell does allow us to expand environment variables and file globs according to the
         # shell's usual mechanism. It is platform-dependent but it is not a problem as this script will be
         # executed on unix machines
-        process = subprocess.Popen(bash_command, shell=shell, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        process = subprocess.Popen(bash_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         out, err = process.communicate()
 
         shell_return = ShellResult()
