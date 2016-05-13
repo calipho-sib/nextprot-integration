@@ -1,6 +1,6 @@
 from __future__ import print_function
 
-from setuptools import setup, find_packages
+from setuptools import setup
 from setuptools.command.test import test as TestCommand
 import codecs
 import os
