@@ -22,13 +22,13 @@ class GitService:
             if not os.path.exists(path):
                 raise OSError(path + " does not exist")
 
-    def update(self, repo, branch):
+    def update(self, repo_path, branch=None):
         """Update the specified git repository"""
-        if repo not in self.__repos:
-            raise ValueError("'"+repo + "' is not registered")
+        if repo_path not in self.__repos:
+            raise ValueError("'"+repo_path + "' is not registered")
 
-        GitService.check_repository(repo)
-        co_mess = self.checkout(repo, branch)
+        GitService.check_repository(repo_path)
+        co_mess = self.checkout(repo_path, branch)
         logging.info(co_mess.rstrip())
 
         if not co_mess.startswith("Your branch is up-to-date with"):
@@ -39,22 +39,25 @@ class GitService:
     def update_all(self):
         """Update all registered git repositories"""
         # Check that the following git repositories are up-to-date and clean
-        for repo, branch in self.__repos.iteritems():
-            self.update(repo, branch)
+        for repo in self.__repos.keys():
+            self.update(repo)
 
-    def checkout(self, repo, branch):
+    def checkout(self, repo_path, branch=None):
         """git checkout the specified repository to the given branch"""
-        if repo not in self.__repos:
-            raise ValueError("'"+repo + "' is not registered")
+        if repo_path not in self.__repos:
+            raise ValueError("'"+repo_path + "' is not registered")
 
-        os.chdir(repo)
+        if branch is None:
+            branch = self.__repos[repo_path]
+
+        os.chdir(repo_path)
         return BashService.exec_bash("git checkout " + branch).stdout
 
     @staticmethod
-    def check_repository(repo):
+    def check_repository(repo_path):
         """Check that the git repository is clean"""
-        os.chdir(repo)
-        mess = "git repository " + repo + " [working branch " + GitService.get_working_branch(repo) + "]"
+        os.chdir(repo_path)
+        mess = "git repository " + repo_path + " [working branch " + GitService.get_working_branch(repo_path) + "]"
 
         # TODO: change with command "git status -su no" (do not show untracked file)
         shell_result = BashService.exec_bash("git status -s")
@@ -70,6 +73,6 @@ class GitService:
         logging.info(mess + " is clean.")
 
     @staticmethod
-    def get_working_branch(repo):
-        os.chdir(repo)
+    def get_working_branch(repo_path):
+        os.chdir(repo_path)
         return BashService.exec_bash("git rev-parse --abbrev-ref HEAD").stdout.rstrip()
