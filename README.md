@@ -15,15 +15,19 @@ clone our github project locally:
 ```
 $ cd to_your_project_path/
 $ clone https://github.com/calipho-sib/nextprot-integration.git
+```
+
+then inside the cloned project create and activate your isolated Python environment `venv`:
+
+```
 $ cd nextprot-integration
-```
-
-then inside the cloned project for instance, create the `venv` folder to install all bins and libs needed
-for `nextprot-integration`:
-
-```
 $ virtualenv [-p /usr/local/bin/pythonX.Y] venv
 $ source venv/bin/activate
+```
+
+and finally install all bins and libs dependencies for project `nextprot-integration`:
+
+```
 $ pip install -r requirements.txt
 ```
 
