@@ -13,7 +13,7 @@ import taskflow.engines
 from taskflow.patterns import graph_flow
 from taskflow.patterns import linear_flow
 from taskflow import task
-from taskflow.listeners import logging as logging_listener
+from taskflow.listeners import timing
 from taskflow.types import notifier
 
 ANY = notifier.Notifier.ANY
@@ -65,7 +65,7 @@ def make_git_flow(repo_pathes):
 # that are occurring, or they can be used to suspend the engine (or perform
 # other useful activities).
 def flow_watch(state, details):
-    print('Flow => %s' % state)
+    print("Flow '%s' transition to state %s" % (details['flow_name'], state))
 
 
 def task_watch(state, details):
@@ -105,7 +105,7 @@ if __name__ == "__main__":
     print(backend.memory.pformat())
     print("----------")
 
-    with logging_listener.DynamicLoggingListener(e):
+    with timing.PrintingDurationListener(e):
         e.run()
 
         print("---------")
