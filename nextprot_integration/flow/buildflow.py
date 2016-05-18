@@ -22,6 +22,7 @@ ANY = notifier.Notifier.ANY
 # 2. flow to
 #
 
+
 class GitUpdateTask(task.Task):
     """Update git repository to the lastest commit."""
     default_provides = ('stdout', 'stderr')
@@ -115,6 +116,6 @@ if __name__ == "__main__":
             if value:
                 print("%s -> %s" % (path, value))
             else:
-                print("%s" % (path))
+                print("%s" % path)
 
 
