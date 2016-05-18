@@ -23,18 +23,20 @@ class GitService:
                 raise OSError(path + " does not exist")
 
     def update(self, repo_path, branch=None):
-        """Update the specified git repository"""
+        """Update the specified git repository and return shell result object"""
         if repo_path not in self.__repos:
             raise ValueError("'"+repo_path + "' is not registered")
 
         GitService.check_repository(repo_path)
-        co_mess = self.checkout(repo_path, branch)
-        logging.info(co_mess.rstrip())
+        co_shell_result = self.checkout(repo_path, branch)
+        logging.info(co_shell_result.stdout.rstrip())
 
-        if not co_mess.startswith("Your branch is up-to-date with"):
-            gp_err_mess = BashService.exec_bash("git pull").stderr
-            if gp_err_mess:
-                raise ValueError(gp_err_mess.rstrip())
+        if not co_shell_result.stdout.startswith("Your branch is up-to-date with"):
+            up_shell_result = BashService.exec_bash("git pull")
+            if up_shell_result.stderr:
+                raise ValueError(up_shell_result.stderr.rstrip())
+            return up_shell_result
+        return co_shell_result
 
     def update_all(self):
         """Update all registered git repositories"""
@@ -43,7 +45,7 @@ class GitService:
             self.update(repo)
 
     def checkout(self, repo_path, branch=None):
-        """git checkout the specified repository to the given branch"""
+        """git checkout the specified repository to the given branch and return shell result object"""
         if repo_path not in self.__repos:
             raise ValueError("'"+repo_path + "' is not registered")
 
@@ -51,7 +53,7 @@ class GitService:
             branch = self.__repos[repo_path]
 
         os.chdir(repo_path)
-        return BashService.exec_bash("git checkout " + branch).stdout
+        return BashService.exec_bash("git checkout " + branch)
 
     @staticmethod
     def check_repository(repo_path):

@@ -18,14 +18,16 @@ class TestGitService(TestCase):
     def test_checkout(self):
         git = GitService()
         repo = EnvService.get_np_loaders_home()
-        git.checkout(repo, "develop")
+        shell_return = git.checkout(repo, "develop")
+        self.assertEqual("Your branch is up-to-date with 'origin/develop'.", shell_return.stdout)
         self.assertEqual("develop", GitService.get_working_branch(repo))
         git.checkout(repo, "didactic_integration")
 
     def test_update(self):
         repo = EnvService.get_np_loaders_home()
         git = GitService()
-        git.update(repo, "develop")
+        shell_return = git.update(repo, "develop")
+        self.assertEqual("Your branch is up-to-date with 'origin/develop'.", shell_return.stdout)
         self.assertEqual("develop", GitService.get_working_branch(repo))
         git.checkout(repo, "didactic_integration")
 
