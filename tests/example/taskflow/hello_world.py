@@ -37,8 +37,8 @@ from taskflow import task
 # parallel if a workflow is provided that is parallelizable).
 
 class PrinterTask(task.Task):
-    def __init__(self, name, show_name=True, inject=None):
-        super(PrinterTask, self).__init__(name, inject=inject)
+    def __init__(self, task_name, show_name=True, inject=None):
+        super(PrinterTask, self).__init__(name=task_name, inject=inject)
         self._show_name = show_name
 
     def execute(self, output):
