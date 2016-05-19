@@ -1,3 +1,4 @@
+import os
 from unittest import TestCase
 
 from nextprot_integration.service.prerequisite import SoftwareCheckr, EnvService
@@ -45,6 +46,13 @@ class TestSoftwareCheckr(TestCase):
 
         with self.assertRaises(OSError):
             EnvService.check_envs(var_names)
+
+    def test_python(self):
+        print("path=%s" % os.getenv("PATH"))
+        SoftwareCheckr.check_python_software()
+
+    def test_virtualenv(self):
+        SoftwareCheckr.check_virtualenv_software()
 
     def test_all(self):
         EnvService.check_all_required_nextprot_envs()

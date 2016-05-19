@@ -75,12 +75,10 @@ class SoftwareCheckr:
         SoftwareCheckr.check_software_exists("java -h")
 
         EnvService.check_envs(["JAVA_HOME"])
-        # note: java -version flush output to stderr
-        shell_result = BashService.exec_bash("java -version", swap_output_error=True)
-
-        m = re.search(r'java version "(\d+\.\d+.\d+).*"', shell_result.stdout.split("\n")[0])
-
-        SoftwareCheckr.__check_minimum_version("jdk", m.group(1), min_version)
+        current_version = SoftwareCheckr.__bash_extract_software_version("java -version",
+                                                                         re.compile(r'java version "(\d+\.\d+.\d+).*"'),
+                                                                         swap_output_error=True)
+        SoftwareCheckr.__check_minimum_version("jdk", current_version, min_version)
 
     @staticmethod
     def check_ant_software(min_version="1.8"):
@@ -89,18 +87,20 @@ class SoftwareCheckr:
         SoftwareCheckr.check_software_exists("ant -h")
 
         EnvService.check_envs(["ANT_HOME"])
-        current_version = SoftwareCheckr.__bash_extract_software_version("ant -version", re.compile(r'.+version (\d+\.\d+.\d+).*'))
+        current_version = SoftwareCheckr.__bash_extract_software_version("ant -version",
+                                                                         re.compile(r'.+version (\d+\.\d+.\d+).*'))
 
         SoftwareCheckr.__check_minimum_version("ant", current_version, min_version)
 
     @staticmethod
     def check_maven_software(min_version="3.0.5"):
-        """Check that the minimum version of ant is installed
+        """Check that the minimum version of maven is installed
         """
         SoftwareCheckr.check_software_exists("mvn -h")
 
         EnvService.check_envs(["M2_HOME"])
-        current_version = SoftwareCheckr.__bash_extract_software_version("mvn -version", re.compile(r'Apache Maven (\d+\.\d+.\d+).*'))
+        current_version = SoftwareCheckr.__bash_extract_software_version("mvn -version",
+                                                                         re.compile(r'Apache Maven (\d+\.\d+.\d+).*'))
 
         SoftwareCheckr.__check_minimum_version("maven", current_version, min_version)
 
@@ -110,17 +110,38 @@ class SoftwareCheckr:
         """
         SoftwareCheckr.check_software_exists("psql --help")
 
-        current_version = SoftwareCheckr.__bash_extract_software_version("psql --version", re.compile(r'psql \(PostgreSQL\) (\d+\.\d+)\.\d+'))
+        current_version = \
+            SoftwareCheckr.__bash_extract_software_version("psql --version",
+                                                           re.compile(r'psql \(PostgreSQL\) (\d+\.\d+)\.\d+'))
 
         SoftwareCheckr.__check_minimum_version("psql", current_version, version, exact=True)
 
     @staticmethod
-    def __bash_extract_software_version(bash_command_version, pattern):
+    def check_python_software(min_version="2.7.11"):
+        """Check that the exact version of python is installed
+        """
+        SoftwareCheckr.check_software_exists("python --help")
+
+        current_version = SoftwareCheckr.__bash_extract_software_version("python --version",
+                                                                         re.compile(r'Python\s+(\d+\.\d+.\d+).*'),
+                                                                         swap_output_error=True)
+        SoftwareCheckr.__check_minimum_version("python", current_version, min_version)
+
+    @staticmethod
+    def check_virtualenv_software(min_version="15.0.1"):
+        """Check that the exact version of virtualenv is installed
+        """
+        SoftwareCheckr.check_software_exists("virtualenv -h")
+
+        current_version = SoftwareCheckr.__bash_extract_software_version("virtualenv --version",
+                                                                         re.compile(r'(\d+\.\d+.\d+)'))
+        SoftwareCheckr.__check_minimum_version("virtualenv", current_version, min_version)
+
+    @staticmethod
+    def __bash_extract_software_version(bash_command_version, pattern, swap_output_error=False):
         """Extract the version number from bash command version
         """
-
-        shell_result = BashService.exec_bash(bash_command_version)
-
+        shell_result = BashService.exec_bash(bash_command_version, swap_output_error=swap_output_error)
         m = pattern.search(shell_result.stdout)
         return m.group(1)
 

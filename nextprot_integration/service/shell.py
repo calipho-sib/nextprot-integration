@@ -48,9 +48,12 @@ class BashService:
     """
     # TODO: remove this HACK !!!!
     # HACK: while setting virtualenv, PATH was modified losing my current profile settings
-    os.environ["PATH"] += os.pathsep + "/Users/fnikitin/Applications/apache-ant-1.9.7/bin"
-    os.environ["PATH"] += os.pathsep + "/Users/fnikitin/Applications/apache-maven-3.2.3/bin"
-    os.environ["PATH"] += os.pathsep + "/Applications/Postgres.app/Contents/MacOS/bin"
+    path = "/usr/local/bin" + os.pathsep + \
+           "/Users/fnikitin/Applications/apache-ant-1.9.7/bin" + os.pathsep + \
+           "/Users/fnikitin/Applications/apache-maven-3.2.3/bin" + os.pathsep + \
+           "/Applications/Postgres.app/Contents/MacOS/bin"
+
+    os.environ["PATH"] = path + os.pathsep + os.environ["PATH"]
 
     def __init__(self):
         pass
