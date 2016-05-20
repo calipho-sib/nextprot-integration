@@ -1,113 +1,101 @@
-# Integration workflow refactoring documentation
+# neXtProt integration
 
 neXtProt data model is a combination of external resources with internal ones.
-We've got an `integration` task that is executed each time our model has to change because of external resource updates.
-This operation is obviously `core` and `critical` for neXtProt and it must not break the integrity of our database.
+We've got this `integration` task that we execute when our model needs to change because of external resource updates.
+This operation is obviously extremely `core` and `critical` for neXtProt and it must not break its database integrity.
 
 Original state (until 2016/01)
 ------------------------------
 
 Historically, this process is executed from an excel file from which the human operator copy/paste/run bash commands sequencially
-in a terminal then checks that everything run as expected (check bash exit code, looking to output(s) and/or database (if state changes)).
+in a terminal then checks that everything run as expected with no error (check bash exit code, looking to output(s) and/or database (if state changes)).
 
-This manual approach is prone to error because this process has not been automated and errors could be complicate to figure out.
+This complicated procedure is time consuming, error-prone and painful for the human resource in charge.
 
-This complicated procedure is time consuming, error-prone and painful for human resource in charge.
+The natural idea of workflow
+----------------------------
 
-Refactoring
------------
+We should automatize this process in a workflow with the following features:
 
-A refactoring of this process should be done with the following features:
+1. automatic: the workflow should be launched once and resumable
+2. modular: every logically linked tasks should be grouped together and launched in Extract/Transform/Load layer (as much as possible)
+3. error detection/handling: error should be detected as early as possible and should be understandable as much as possible
+4. break points: some check points, recovery points and resuming points should be created to control and trace key steps of this workflow
+5. persistent task state: every running task state should be saved and accessible to enable resumability.
 
-1. automatic: the workflow should be launched once
-2. modularity: common codes should be grouped together and launched in Extract/Transform/Load layer (as much as possible)
-3. error detection/handling: error should be detected as early as possible
-4. break points: check points, recovery points and resuming points to trace all workflow steps
+###### Break points
 
-1 - Categorizing commands
--------------------------
+    We want to set points in our workflow for:
 
-- Categorize each command by type + exit type (ant task, bash command)
-- group commands by ETL
-- categorize each command block by Prepare/Extract/Transform/Load categories
+    - validation of key commands (check point)
+    - reverting from any point (recovery point)
+    - resuming from any point (resume point)
 
-One of the first step is command categorisation
+The chosen one: `taskflow`
+--------------------------
 
-- pure bash: cd, setvar,...
-- ant tasks
-- psql
+```
+TaskFlow is a Python library for OpenStack (and other projects) that helps make task execution easy, consistent, scalable and reliable.
+It allows the creation of lightweight task objects and/or functions that are combined together into flows (aka: workflows) in a declarative manner.
 
-Use/case ?
-Once the categorisation has been done, we can generate a graph of command dependencies.
-Knowing how a specific command affect the workflow is valuable.
+It includes engines for running these flows in a manner that can be stopped, resumed, and safely reverted.
+Projects implemented using this library can enjoy added state resiliency, natural declarative construction, easier testability
+(since a task does one and only one thing), workflow pluggability, fault tolerance and simplified crash recovery/tolerance (and more).
+```
 
-2 - Break points
-----------------
+Here is a link to their wiki for more informations: https://wiki.openstack.org/wiki/TaskFlow.
 
-We want to set points in our workflow:
-
-- validation of key commands (check point)
-- reverting from any point (recovery point)
-- resuming from any point (resume point)
-
-2.1 - Proposal: Tree data structure
-
-We would like to identify uniquely any point in the workflow to be able to revert/resume to/from anywhere.
-
-To add those features we want:
-
-- to identify each command uniquely.
-- to have orderable ids depending on the sequence of processed command
-
-Those points should be set depending on kind of event:
-
--	on error: set resume point in command that crashed (see if internal changed)
--	on recovery: resume from the last resume point
-
-A tree is a natural data structure that have those characteristics:
-
--	each node is a script
--	each leave is a command
-
-2.2 - Algorithm
-
-  2.2.1. Parse hierarchy of workflow scripts and generate a code tree
-
-  2.2.1. Navigate this tree with cursors for current command id
-
-    Note: 'build-code' block particularity
-       - 'build-code' block is totally independent from the rest
-       - all other commands are all dependent on 'build-code'
-
-    This piece should not be added to the tree: each time the source change (fix for example), 'build-code'
-    should be run again and the resuming should be done right from the failing command.
+This library provides all that is needed to create our own tasks and workflows.
 
 
+Converting commands (from data-load.xls) into tasks graph
+---------------------------------------------------------
 
-3. Integration Workflow
+A task should:
 
-Here are the steps to execute:
+- execute an action (in execute())
+- be able to recover from this action in case of error (in revert())
+- optionally required/receive 1 or many input(s)
+- produces/declare 1 or many output(s) (at least stdout and stderr)
+- notify any side effects at the level of any persistent volume (database or filesystem)
 
-Preparing exec system:
+###### Side effects
 
--A check host system (softs + envs) [always run]
--B update all git repos (w/ scripts + libs + apps that will run to fullfill integration) [run if local branch behind remote branch]
--B.a check status/update np_loaders git repo (linked with building code)
--B.b check status/update np_perl_parsers git repo
--B.c check status/update np_cv git repo
--C loading java properties (needed by scripts and ant tasks) [always run]
--D checking np_annot_uat database (the integration db) [always run]
+    a file could be produced that could contain
+    - the volume type (db or fs)
+    - the list of logical unit affected
 
-Building and installing code
+    for example, lets take the example of a simple task that create a file in a specific path
+    we could produce the following file:
 
--E integration perl [rerun if git repo 'np_perl_parsers' pulled]
--F integration jars [rerun if git repo 'np_loaders' pulled]
--G np_mappings jar [rerun if git repo 'np_loaders' pulled]
+    type: fs
+    path: /tmp/my_file
 
-Updating np_annot_uat schemas
+###### [Tips](https://wiki.openstack.org/wiki/TaskFlow/Best_practices)
+    create reuseable tasks that do one thing well in their execute method;
+      if that task has side-effects undo those side-effects in the revert method.
+    ...
 
--H np_annot_uat.np_mappings schema
--I np_annot_uat.nextprot schema
+One of the major effort is to group commands found in the excel in tasks and determine what define a Task.
+And then compose them into useful structure like workflow and subflows and impose some definition of order
+onto the running of our tasks or subflows.
 
+The execution through engine should be controlled, monitored and recoverable.
 
+Subflow 1: init
+---------------
+
+    1. the filesystem (FS) on which the workflow is launched has to be checked.
+    1.1. check/load environment variables correctly
+    1.2. check/load java properties (needed by scripts and ant tasks (see sf 2))
+    1.3. check required external softwares (with minimal versions) correctly installed
+         jdk, ant, maven, psql, [python, virtualenv]
+    2. the database (DB) and schema has to be checked too.
+    2.1. database connectable ? schema exists ?
+    2.2. init database to initial backup (the dump of the latest release)
+
+Any error is not recoverable and should lead to engine failure.
+
+- building-tools.md
+- updating_schemas_task
 
