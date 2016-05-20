@@ -21,8 +21,8 @@ class DatabaseService:
         try:
             conn = psycopg2.connect("dbname='" + db_name + "' user='postgres' host='localhost' password='postgres'")
             conn.close()
-        except:
-            raise ValueError("unable to connect to database '" + db_name+"'")
+        except Exception as error:
+            raise ValueError("unable to connect to database '" + db_name+"', message=" + str(error.message))
 
     @staticmethod
     def vacuum_verbose_analyze(db_name):
@@ -50,7 +50,6 @@ class DatabaseService:
                   + " -f " + dump_dir+"/"+db_schema+"."+db_name+"_$(date "+"+%Y%m%d"+")-$(hostname).dump.gz " \
                   + db_name
         shell_result = BashService.exec_bash(command)
-        print shell_result
         if shell_result.has_error():
             raise ValueError("unable to dump database '" + db_name + "." + db_schema + "': " + shell_result.stderr +
                              " (command: '" + command + "')")
@@ -131,10 +130,10 @@ class Database(object):
         raise an OSError if db does not exist or is not connectable"""
         try:
             conn = psycopg2.connect("dbname='" + self.db_name + "' user='postgres' host='" +
-                                    self.host +"' password='" + self.password +"'")
+                                    self.host + "' password='" + self.password + "'")
             conn.close()
-        except OperationalError:
-            raise ValueError("unable to connect to database '" + self.db_name + "'")
+        except Exception as error:
+            raise ValueError("unable to connect to database '" + self.db_name+"', message=" + str(error.message))
 
     def dump(self, db_schema):
         """Dumps database db_name.db_schema to directory dump_dir and register in memory/pickle in disk ?
