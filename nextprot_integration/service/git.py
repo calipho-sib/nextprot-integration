@@ -67,7 +67,7 @@ class GitService:
             status_list = filter(None, shell_result.stdout.split("\n"))
 
             for status in status_list:
-                code, filename = re.split(r'\s+', status)
+                code, filename = filter(None, re.split(r'\s+', status))
                 if code != '??':
                     raise ValueError(mess + " is not clean: file='" + filename + "', status='" + code+"'")
                 else:
