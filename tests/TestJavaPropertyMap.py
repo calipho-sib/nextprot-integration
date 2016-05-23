@@ -7,6 +7,7 @@ from nextprot_integration.JavaPropertyMap import JavaPropertyMap
 class TestJavaPropertyMap(TestCase):
 
     prop_file = os.getcwd()+"/dataload.properties"
+    another_prop_file = os.getcwd()+"/another.properties"
 
     def setUp(self):
         pass
@@ -62,3 +63,8 @@ class TestJavaPropertyMap(TestCase):
         prop.add_property("bob", "sponge")
         self.assertEqual(10, prop.count_properties())
         self.assertEqual("sponge", prop.get_property("bob"))
+
+    def test_load_another_property_file(self):
+        prop = JavaPropertyMap(self.__class__.prop_file)
+        prop.load_properties(self.__class__.another_prop_file)
+        self.assertEqual('/Users/spongebob/data/integration/build/jars', prop.get_property("jar.repository.path"))
