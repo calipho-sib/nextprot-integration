@@ -31,10 +31,6 @@ class TestGitService(TestCase):
         self.assertEqual("develop", GitService.get_working_branch(repo))
         git.checkout(repo, "didactic_integration")
 
-    def test_non_existing_repo(self):
-        with self.assertRaises(OSError):
-            GitService(registered_repos={"monrepo": 'didactic_integration'})
-
     def test_unregistered_repo(self):
         git = GitService()
         with self.assertRaises(ValueError):

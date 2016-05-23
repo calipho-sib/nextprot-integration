@@ -9,13 +9,15 @@ class GitService:
     """
     This class checks and update git repositories
     """
-    def __init__(self, registered_repos=None):
-        if registered_repos is None:
+    def __init__(self, dev_mode=False):
+        if not dev_mode:
             self.__repos = {EnvService.get_np_perl_parsers_home(): 'master',
                             EnvService.get_np_loaders_home(): 'develop',
                             EnvService.get_np_cv_home(): 'master'}
         else:
-            self.__repos = registered_repos
+            self.__repos = {EnvService.get_np_perl_parsers_home(): 'didactic_integration',
+                            EnvService.get_np_loaders_home(): 'didactic_integration',
+                            EnvService.get_np_cv_home(): 'master'}
 
         # check directory path
         for path in self.__repos.keys():
