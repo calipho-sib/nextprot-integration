@@ -44,6 +44,10 @@ class EnvService:
     def get_np_cv_home():
         return os.getenv("NP_CV_HOME")
 
+    @staticmethod
+    def get_nextprot_perl5_lib():
+        return os.getenv("PERL5LIB")+"/NextProt"
+
 
 class SoftwareCheckr:
     """

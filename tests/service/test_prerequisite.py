@@ -61,4 +61,5 @@ class TestSoftwareCheckr(TestCase):
         self.assertIsNotNone(EnvService.get_np_dataload_prop_filename())
         self.assertIsNotNone(EnvService.get_np_perl_parsers_home())
         self.assertIsNotNone(EnvService.get_np_cv_home())
-
+        self.assertIsNotNone(EnvService.get_nextprot_perl5_lib())
+        self.assertTrue(EnvService.get_nextprot_perl5_lib().endswith("/NextProt"))
