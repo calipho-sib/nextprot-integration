@@ -1,7 +1,7 @@
+# coding=utf-8
+import os
 import time
-
 import shutil
-
 import re
 
 from nextprot_integration.service.git import GitService
@@ -9,12 +9,7 @@ from nextprot_integration.service.prerequisite import EnvService
 from nextprot_integration.service.shell import BashService
 from nextprot_integration.settings import Settings
 from taskflow import task
-import taskflow.engines
-from taskflow.patterns import linear_flow
-from taskflow.listeners import timing
-from taskflow.types import notifier
-
-ANY = notifier.Notifier.ANY
+from taskflow.patterns import linear_flow, unordered_flow
 
 
 class GitUpdate(task.Task):
@@ -30,6 +25,14 @@ class GitUpdate(task.Task):
         gs = GitService(dev_mode=True)
         result = gs.update(repo_path=git_repo_path)
         return result.stdout, result.stderr
+
+
+class FakeErrorTask(task.Task):
+    """Always raise a ValueError
+    """
+
+    def execute(self, stdout):
+        raise ValueError("Raising a fake error")
 
 
 class OutputAnalysis(task.Task):
@@ -66,7 +69,7 @@ class LogTask(task.Task):
         return stdout
 
 
-class ToolsIntegrationInstallJarCode(task.Task):
+class ToolsIntegrationBuildJarCode(task.Task):
     """build and install tools integration jars in proper place
     """
     default_provides = ('stdout', 'log_file_path')
@@ -79,12 +82,13 @@ class ToolsIntegrationInstallJarCode(task.Task):
         return stdout, settings.get_log_dir()+"/install-tools-integration-jars_"+time.strftime("%Y%m%d-%H%M%S")+".log"
 
     def revert(self, settings, *args, **kwargs):
-        print ("clean "+str(settings.get_jar_repository_path()))
-        shutil.rmtree(settings.get_jar_repository_path())
+        file_path = settings.get_jar_repository_path()+"/com.genebio.nextprot.dataloader-jar-with-dependencies.jar"
+        print ("remove file "+file_path)
+        os.remove(file_path)
 
 
-class ToolsIntegrationInstallPerlCode(task.Task):
-    """build and install tools integration jars in proper place
+class ToolsIntegrationBuildPerlLibs(task.Task):
+    """install perl dependencies, build and deploy perl libs found in repo ${np.parser.pl}
     """
     default_provides = ('stdout', 'log_file_path')
 
@@ -96,8 +100,30 @@ class ToolsIntegrationInstallPerlCode(task.Task):
         return stdout, settings.get_log_dir()+"/install-tools-integration-perl_"+time.strftime("%Y%m%d-%H%M%S")+".log"
 
     def revert(self, settings, *args, **kwargs):
-        print ("clean "+str(settings.get_perl_install_path()))
-        shutil.rmtree(settings.get_perl_install_path())
+        print ("cleaning "+str(EnvService.get_nextprot_perl5_lib()))
+        shutil.rmtree(EnvService.get_nextprot_perl5_lib())
+
+
+class ToolsMappingsBuildJarCode(task.Task):
+    """build and install tools mappings jar in proper place
+
+    Remark: the build jar com.genebio.nextprot.genemapping.datamodel.jar is deployed in
+    EnvService.get_np_loaders_home()/com.genebio.nextprot.genemapping.datamodel/target
+    """
+    default_provides = ('stdout', 'log_file_path')
+
+    def execute(self, settings):
+        stdout = BashService.exec_ant_task(ant_task_path=settings.get_tools_mappings_dir(),
+                                           ant_lib_path=settings.get_ant_lib_dir(),
+                                           ant_task="install-jar",
+                                           prop_file=EnvService.get_np_dataload_prop_filename())
+        return stdout, settings.get_log_dir()+"/install-mappings-integration-jar_"+time.strftime("%Y%m%d-%H%M%S")+".log"
+
+    def revert(self, settings, *args, **kwargs):
+        target_dir = EnvService.get_np_loaders_home()+"/com.genebio.nextprot.genemapping.datamodel/target"
+
+        print ("cleaning "+target_dir)
+        shutil.rmtree(target_dir)
 
 
 def make_git_update_flow():
@@ -111,71 +137,36 @@ def make_git_update_flow():
     return lf
 
 
-def make_flow():
+def make_build_code_flow():
     """
-    update-code-repos -> ant-install-jars --(output,logfile)--> store output in log file --(output)--> analysis output
+    update-code-repos
+     │
+     `──> build-integration-jars --(output,logfile)--> store output in log file --(output)--> analysis output
+     │
+     └──> build-perl-libs --(output,logfile)--> store output in log file --(output)--> analysis output
+     │
+     `──> build-mappings-jar --(output,logfile)--> store output in log file --(output)--> analysis output
     """
-    git_flow = linear_flow.Flow('code-building-flow')
+    build_integration_jars = linear_flow.Flow('build-integration-jars-flow')
+    build_integration_jars.add(ToolsIntegrationBuildJarCode(inject={'settings': Settings(dev_mode=True)}))
+    build_integration_jars.add(LogTask(name="build-integration-jars-out-log"))
+    build_integration_jars.add(OutputAnalysis(name="build-integration-jars-out-analyse"))
 
-    git_flow.add(make_git_update_flow())
+    build_perl_libs = linear_flow.Flow('build-perl-libs-flow')
+    build_perl_libs.add(ToolsIntegrationBuildPerlLibs(inject={'settings': Settings(dev_mode=True)}))
+    build_perl_libs.add(LogTask(name="build-perl-libs-out-log"))
+    build_perl_libs.add(OutputAnalysis(name="build-perl-libs-out-analyse"))
 
-    git_flow.add(ToolsIntegrationInstallJarCode(inject={'settings': Settings(dev_mode=True)}))
-    git_flow.add(LogTask(name="log jars installation ant output"))
-    git_flow.add(OutputAnalysis(name="analyse jars installation ant output"))
+    build_mapping_jar = linear_flow.Flow('build-mappings-jar-flow')
+    build_mapping_jar.add(ToolsMappingsBuildJarCode(inject={'settings': Settings(dev_mode=True)}))
+    build_mapping_jar.add(LogTask(name="build-mappings-jar-out-log"))
+    build_mapping_jar.add(OutputAnalysis(name="build-mappings-jar-out-analyse"))
 
-    git_flow.add(ToolsIntegrationInstallPerlCode(inject={'settings': Settings(dev_mode=True)}))
-    git_flow.add(LogTask(name="log perl installation ant output"))
-    git_flow.add(OutputAnalysis(name="analyse perl installation ant output"))
+    build_flow = linear_flow.Flow('code-building-flow')
+    build_flow.add(make_git_update_flow())
+    build_flow.add(unordered_flow.Flow('unordered-builds').add(
+        build_integration_jars,
+        build_perl_libs,
+        build_mapping_jar))
 
-    return git_flow
-
-
-def flow_watch(state, details):
-    print("Flow '%s' transition to state %s" % (details['flow_name'], state))
-
-
-def task_watch(state, details):
-    print('Task %s => %s' % (details.get('task_name'), state))
-
-
-def print_wrapped(text):
-    print("-" * (len(text)))
-    print(text)
-    print("-" * (len(text)))
-
-
-if __name__ == "__main__":
-    print_wrapped('Running all tasks:')
-
-    gf = make_flow()
-
-    e = taskflow.engines.load(gf, engine='serial')
-    # This registers all (ANY) state transitions to trigger a call to the
-    # flow_watch function for flow state transitions, and registers the
-    # same all (ANY) state transitions for task state transitions.
-    e.notifier.register(ANY, flow_watch)
-    e.atom_notifier.register(ANY, task_watch)
-
-    e.compile()
-    e.prepare()
-    # After prepare the storage layer + backend can now be accessed safely...
-    backend = e.storage.backend
-
-    print("----------")
-    print("Before run")
-    print("----------")
-    print(backend.memory.pformat())
-    print("----------")
-
-    with timing.PrintingDurationListener(e):
-        e.run()
-
-        print("---------")
-        print("After run")
-        print("---------")
-        for path in backend.memory.ls_r(backend.memory.root_path, absolute=True):
-            value = backend.memory[path]
-            if value:
-                print("%s -> %s" % (path, value))
-            else:
-                print("%s" % path)
+    return build_flow
