@@ -1,6 +1,4 @@
 import os
-from sqlite3 import OperationalError
-
 import psycopg2
 import logging
 from shell import BashService

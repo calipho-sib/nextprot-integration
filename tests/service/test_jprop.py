@@ -1,7 +1,7 @@
-import os
 from unittest import TestCase
 
-from nextprot_integration.JavaPropertyMap import JavaPropertyMap
+import os
+from nextprot_integration.service.jprop import JavaPropertyMap
 
 
 class TestJavaPropertyMap(TestCase):

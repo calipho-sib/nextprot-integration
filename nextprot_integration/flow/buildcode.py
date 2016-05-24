@@ -7,7 +7,6 @@ import re
 from nextprot_integration.service.git import GitService
 from nextprot_integration.service.prerequisite import EnvService
 from nextprot_integration.service.shell import BashService
-from nextprot_integration.settings import Settings
 from taskflow import task
 from taskflow.patterns import linear_flow, unordered_flow
 
@@ -137,7 +136,7 @@ def make_git_update_flow():
     return lf
 
 
-def make_build_code_flow():
+def make_build_code_flow(settings):
     """
     update-code-repos
      │
@@ -148,17 +147,17 @@ def make_build_code_flow():
      `──> build-mappings-jar --(output,logfile)--> store output in log file --(output)--> analysis output
     """
     build_integration_jars = linear_flow.Flow('build-integration-jars-flow')
-    build_integration_jars.add(ToolsIntegrationBuildJarCode(inject={'settings': Settings(dev_mode=True)}))
+    build_integration_jars.add(ToolsIntegrationBuildJarCode(inject={'settings': settings}))
     build_integration_jars.add(LogTask(name="build-integration-jars-out-log"))
     build_integration_jars.add(OutputAnalysis(name="build-integration-jars-out-analyse"))
 
     build_perl_libs = linear_flow.Flow('build-perl-libs-flow')
-    build_perl_libs.add(ToolsIntegrationBuildPerlLibs(inject={'settings': Settings(dev_mode=True)}))
+    build_perl_libs.add(ToolsIntegrationBuildPerlLibs(inject={'settings': settings}))
     build_perl_libs.add(LogTask(name="build-perl-libs-out-log"))
     build_perl_libs.add(OutputAnalysis(name="build-perl-libs-out-analyse"))
 
     build_mapping_jar = linear_flow.Flow('build-mappings-jar-flow')
-    build_mapping_jar.add(ToolsMappingsBuildJarCode(inject={'settings': Settings(dev_mode=True)}))
+    build_mapping_jar.add(ToolsMappingsBuildJarCode(inject={'settings': settings}))
     build_mapping_jar.add(LogTask(name="build-mappings-jar-out-log"))
     build_mapping_jar.add(OutputAnalysis(name="build-mappings-jar-out-analyse"))
 
