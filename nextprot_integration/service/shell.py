@@ -81,22 +81,45 @@ class BashService:
         return shell_return
 
     @staticmethod
-    def exec_ant_task(ant_task_path, ant_lib_path, ant_task, prop_file):
+    def exec_ant_task(ant_build_path, ant_lib_path, ant_target, prop_file):
         """Execute ant task located at specified path
+        :param ant_build_path the path to build.xml
+        :param ant_lib_path the path to search for jars and classes
+        :param ant_target the target to execute
+        :param prop_file the path to the property file
         """
-        if not os.path.isdir(ant_task_path):
-            raise ValueError("cannot find directory '" + ant_task_path+"'")
+        if not os.path.isdir(ant_build_path):
+            raise ValueError("cannot find directory '" + ant_build_path+"'")
 
-        logging.info("cd "+ant_task_path)
-        os.chdir(ant_task_path)
+        logging.info("cd "+ant_build_path)
+        os.chdir(ant_build_path)
 
-        command = "ant -lib " + ant_lib_path+" -propertyfile " + prop_file + " " + ant_task
+        command = "ant -lib " + ant_lib_path+" -propertyfile " + prop_file + " " + ant_target
         shell_result = BashService.exec_bash(command)
 
         if shell_result.has_error():
             logging.error(command + ": " + shell_result.stdout)
             raise ValueError(command + " failure: " + shell_result.stderr)
-        else:
-            logging.info(command + " success: " + shell_result.stdout)
+
+        return shell_result.stdout
+
+    @staticmethod
+    def exec_maven_task(mvn_pom_path, mvn_goal):
+        """Execute ant task located at specified path
+        :param mvn_pom_path the path to pom.xml
+        :param mvn_goal the goal to execute
+        """
+        if not os.path.isdir(mvn_pom_path):
+            raise ValueError("cannot find directory '" + mvn_pom_path+"'")
+
+        logging.info("cd "+mvn_pom_path)
+        os.chdir(mvn_pom_path)
+
+        command = "mvn " + mvn_goal
+        shell_result = BashService.exec_bash(command)
+
+        if shell_result.has_error():
+            logging.error(command + ": " + shell_result.stdout)
+            raise ValueError(command + " failure: " + shell_result.stderr)
 
         return shell_result.stdout

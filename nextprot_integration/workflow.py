@@ -100,7 +100,8 @@ def task_watch(state, details):
 def make_main_flow():
 
     main_flow = linear_flow.Flow('integration-flow')
-    main_flow.add(make_build_code_flow(Settings(dev_mode=True)))
+    # load.xls/uniprot: building jars and perl libs
+    main_flow.add(make_build_code_flow(Settings(dev_mode=False)))
 
     return main_flow
 

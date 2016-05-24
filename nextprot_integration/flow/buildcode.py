@@ -16,12 +16,13 @@ class GitUpdate(task.Task):
     """
     default_provides = ('stdout', 'stderr')
 
-    def execute(self, git_repo_path):
+    def execute(self, git_repo_path, settings):
         """Execute this task.
         :param git_repo_path: the git repository to update
+        :param settings the workflow settings
         :return: the tuple (stdout, stderr)
         """
-        gs = GitService(dev_mode=True)
+        gs = GitService(dev_mode=settings.dev_mode())
         result = gs.update(repo_path=git_repo_path)
         return result.stdout, result.stderr
 
@@ -68,15 +69,15 @@ class LogTask(task.Task):
         return stdout
 
 
-class ToolsIntegrationBuildJarCode(task.Task):
+class ToolsIntegrationBuildJars(task.Task):
     """build and install tools integration jars in proper place
     """
     default_provides = ('stdout', 'log_file_path')
 
     def execute(self, settings):
-        stdout = BashService.exec_ant_task(ant_task_path=settings.get_tools_integration_dir(),
+        stdout = BashService.exec_ant_task(ant_build_path=settings.get_tools_integration_dir(),
                                            ant_lib_path=settings.get_ant_lib_dir(),
-                                           ant_task="install-jars",
+                                           ant_target="install-jars",
                                            prop_file=EnvService.get_np_dataload_prop_filename())
         return stdout, settings.get_log_dir()+"/install-tools-integration-jars_"+time.strftime("%Y%m%d-%H%M%S")+".log"
 
@@ -92,9 +93,9 @@ class ToolsIntegrationBuildPerlLibs(task.Task):
     default_provides = ('stdout', 'log_file_path')
 
     def execute(self, settings):
-        stdout = BashService.exec_ant_task(ant_task_path=settings.get_tools_integration_dir(),
+        stdout = BashService.exec_ant_task(ant_build_path=settings.get_tools_integration_dir(),
                                            ant_lib_path=settings.get_ant_lib_dir(),
-                                           ant_task="install-perl",
+                                           ant_target="install-perl",
                                            prop_file=EnvService.get_np_dataload_prop_filename())
         return stdout, settings.get_log_dir()+"/install-tools-integration-perl_"+time.strftime("%Y%m%d-%H%M%S")+".log"
 
@@ -103,18 +104,38 @@ class ToolsIntegrationBuildPerlLibs(task.Task):
         shutil.rmtree(EnvService.get_nextprot_perl5_lib())
 
 
-class ToolsMappingsBuildJarCode(task.Task):
-    """build and install tools mappings jar in proper place
+class BuildScalaParserJars(task.Task):
+    """build scala parser jars
 
-    Remark: the build jar com.genebio.nextprot.genemapping.datamodel.jar is deployed in
-    EnvService.get_np_loaders_home()/com.genebio.nextprot.genemapping.datamodel/target
+    Side Effect: deploys jars in settings.get_tools_integration_dir()/target:
+        - integration-1.0-jar-with-dependencies.jar
+        - integration-1.0.jar
     """
     default_provides = ('stdout', 'log_file_path')
 
     def execute(self, settings):
-        stdout = BashService.exec_ant_task(ant_task_path=settings.get_tools_mappings_dir(),
+        stdout = BashService.exec_maven_task(mvn_pom_path=settings.get_tools_integration_dir(),
+                                             mvn_goal="package")
+        return stdout, settings.get_log_dir()+"/build-scala-parsers_"+time.strftime("%Y%m%d-%H%M%S")+".log"
+
+    def revert(self, settings, *args, **kwargs):
+        target_dir = settings.get_tools_integration_dir()+"/target"
+        print ("cleaning "+target_dir)
+        shutil.rmtree(target_dir)
+
+
+class ToolsMappingsBuildJar(task.Task):
+    """build and install tools mappings jar in proper place
+
+    Side Effect: deploys jar in EnvService.get_np_loaders_home()/com.genebio.nextprot.genemapping.datamodel/target:
+        - com.genebio.nextprot.genemapping.datamodel.jar
+    """
+    default_provides = ('stdout', 'log_file_path')
+
+    def execute(self, settings):
+        stdout = BashService.exec_ant_task(ant_build_path=settings.get_tools_mappings_dir(),
                                            ant_lib_path=settings.get_ant_lib_dir(),
-                                           ant_task="install-jar",
+                                           ant_target="install-jar",
                                            prop_file=EnvService.get_np_dataload_prop_filename())
         return stdout, settings.get_log_dir()+"/install-mappings-integration-jar_"+time.strftime("%Y%m%d-%H%M%S")+".log"
 
@@ -125,14 +146,14 @@ class ToolsMappingsBuildJarCode(task.Task):
         shutil.rmtree(target_dir)
 
 
-def make_git_update_flow():
+def make_git_update_flow(settings):
     """update repositories nextprot-perl-parsers and nextprot-loaders
     """
     lf = linear_flow.Flow("update-repos")
 
     for repo_path in [EnvService.get_np_perl_parsers_home(), EnvService.get_np_loaders_home()]:
         lf.add(GitUpdate(name='git-update-%s' % repo_path.rsplit('/', 1)[1],
-                         inject={'git_repo_path': repo_path}))
+                         inject={'git_repo_path': repo_path, 'settings': settings}))
     return lf
 
 
@@ -144,10 +165,12 @@ def make_build_code_flow(settings):
      │
      └──> build-perl-libs --(output,logfile)--> store output in log file --(output)--> analysis output
      │
+     `──> build-scala-parser-jars --(output,logfile)--> store output in log file --(output)--> analysis output
+     │
      `──> build-mappings-jar --(output,logfile)--> store output in log file --(output)--> analysis output
     """
     build_integration_jars = linear_flow.Flow('build-integration-jars-flow')
-    build_integration_jars.add(ToolsIntegrationBuildJarCode(inject={'settings': settings}))
+    build_integration_jars.add(ToolsIntegrationBuildJars(inject={'settings': settings}))
     build_integration_jars.add(LogTask(name="build-integration-jars-out-log"))
     build_integration_jars.add(OutputAnalysis(name="build-integration-jars-out-analyse"))
 
@@ -156,16 +179,22 @@ def make_build_code_flow(settings):
     build_perl_libs.add(LogTask(name="build-perl-libs-out-log"))
     build_perl_libs.add(OutputAnalysis(name="build-perl-libs-out-analyse"))
 
+    build_scala_parser_jars = linear_flow.Flow('build-scala-parser-jars-flow')
+    build_scala_parser_jars.add(BuildScalaParserJars(inject={'settings': settings}))
+    build_scala_parser_jars.add(LogTask(name="build-scala-parser-jars-out-log"))
+    build_scala_parser_jars.add(OutputAnalysis(name="build-scala-parser-jars-out-analyse"))
+
     build_mapping_jar = linear_flow.Flow('build-mappings-jar-flow')
-    build_mapping_jar.add(ToolsMappingsBuildJarCode(inject={'settings': settings}))
+    build_mapping_jar.add(ToolsMappingsBuildJar(inject={'settings': settings}))
     build_mapping_jar.add(LogTask(name="build-mappings-jar-out-log"))
     build_mapping_jar.add(OutputAnalysis(name="build-mappings-jar-out-analyse"))
 
     build_flow = linear_flow.Flow('code-building-flow')
-    build_flow.add(make_git_update_flow())
+    build_flow.add(make_git_update_flow(settings=settings))
     build_flow.add(unordered_flow.Flow('unordered-builds').add(
         build_integration_jars,
         build_perl_libs,
+        build_scala_parser_jars,
         build_mapping_jar))
 
     return build_flow
