@@ -3,6 +3,7 @@ import os
 import time
 import shutil
 import re
+from nextprot_integration.flow.flows import AbstractFlowFactory
 
 from nextprot_integration.service.git import GitService
 from nextprot_integration.service.prerequisite import EnvService
@@ -109,7 +110,7 @@ class ToolsIntegrationBuildPerlLibs(task.Task):
                                            ant_lib_path=settings.get_ant_lib_dir(),
                                            ant_target="install-perl",
                                            prop_file=EnvService.get_np_dataload_prop_filename())
-        return stdout, settings.get_log_dir()+"/install-tools-integration-perl_"+time.strftime("%Y%m%d-%H%M%S")+".log"
+        return stdout, settings.get_log_dir()+"/install-tools-perl-libs_"+time.strftime("%Y%m%d-%H%M%S")+".log"
 
     def revert(self, settings, *args, **kwargs):
         print ("cleaning "+str(EnvService.get_nextprot_perl5_lib()))
@@ -130,7 +131,7 @@ class BuildScalaParserJars(task.Task):
     def execute(self, settings):
         stdout = BashService.exec_maven_task(mvn_pom_path=settings.get_tools_integration_dir(),
                                              mvn_goal="package")
-        return stdout, settings.get_log_dir()+"/build-scala-parsers_"+time.strftime("%Y%m%d-%H%M%S")+".log"
+        return stdout, settings.get_log_dir()+"/install-scala-parsers_"+time.strftime("%Y%m%d-%H%M%S")+".log"
 
     def revert(self, settings, *args, **kwargs):
         target_dir = settings.get_tools_integration_dir()+"/target"
@@ -153,7 +154,7 @@ class ToolsMappingsBuildJar(task.Task):
                                            ant_lib_path=settings.get_ant_lib_dir(),
                                            ant_target="install-jar",
                                            prop_file=EnvService.get_np_dataload_prop_filename())
-        return stdout, settings.get_log_dir()+"/install-mappings-integration-jar_"+time.strftime("%Y%m%d-%H%M%S")+".log"
+        return stdout, settings.get_log_dir()+"/install-tools-integration-mappings-jar_"+time.strftime("%Y%m%d-%H%M%S")+".log"
 
     def revert(self, settings, *args, **kwargs):
         target_dir = EnvService.get_np_loaders_home()+"/com.genebio.nextprot.genemapping.datamodel/target"
@@ -162,55 +163,143 @@ class ToolsMappingsBuildJar(task.Task):
         shutil.rmtree(target_dir)
 
 
-def make_git_update_flow(settings):
-    """update repositories nextprot-perl-parsers and nextprot-loaders
+class DbIntegrationUpdate(task.Task):
+    """update the integration database structure with DbMaintain
+
+    [Note about code from load.xls/uniprot (line 16,18)]
+
+    Side Effect (non revertible):
+    Update tables from scripts in com.genebio.nextprot.datamodel/src/main/resources/dbscripts/
+    Update table dbmaintain_scripts by adding a row for each executed script (and execution state: field "succeeded")
     """
-    lf = linear_flow.Flow("update-repos")
+    default_provides = ('stdout', 'log_file_path')
 
-    for repo_path in [EnvService.get_np_perl_parsers_home(), EnvService.get_np_loaders_home()]:
-        lf.add(GitUpdate(name='git-update-%s' % repo_path.rsplit('/', 1)[1],
-                         inject={'git_repo_path': repo_path, 'settings': settings}))
-    return lf
+    def execute(self, settings):
+        stdout = BashService.exec_ant_task(ant_build_path=settings.get_tools_integration_dir(),
+                                           ant_lib_path=settings.get_ant_lib_dir(),
+                                           ant_target="db-integration-update",
+                                           prop_file=EnvService.get_np_dataload_prop_filename())
+        return stdout, settings.get_log_dir()+"/db-integration-update_"+time.strftime("%Y%m%d-%H%M%S")+".log"
 
 
-def make_build_code_flow(settings):
+class DbMappingsUpdate(task.Task):
+    """update the mappings database structure with DbMaintain
+
+    [Note about code from load.xls/uniprot (line 21,23)]
+
+    Side Effect (non revertible):
+    Update tables from scripts in com.genebio.nextprot.genemapping.datamodel/src/main/resources/dbscripts
+    Update table dbmaintain_scripts by adding a row for each executed script (and execution state: field "succeeded")
     """
-    update-code-repos
-     │
-     `──> build-integration-jars --(output,logfile)--> store output in log file --(output)--> analysis output
-     │
-     └──> build-perl-libs --(output,logfile)--> store output in log file --(output)--> analysis output
-     │
-     `──> build-scala-parser-jars --(output,logfile)--> store output in log file --(output)--> analysis output
-     │
-     `──> build-mappings-jar --(output,logfile)--> store output in log file --(output)--> analysis output
-    """
-    build_integration_jars = linear_flow.Flow('build-integration-jars-flow')
-    build_integration_jars.add(ToolsIntegrationBuildJars(inject={'settings': settings}))
-    build_integration_jars.add(LogTask(name="build-integration-jars-out-log"))
-    build_integration_jars.add(OutputAnalysis(name="build-integration-jars-out-analyse"))
+    default_provides = ('stdout', 'log_file_path')
 
-    build_perl_libs = linear_flow.Flow('build-perl-libs-flow')
-    build_perl_libs.add(ToolsIntegrationBuildPerlLibs(inject={'settings': settings}))
-    build_perl_libs.add(LogTask(name="build-perl-libs-out-log"))
-    build_perl_libs.add(OutputAnalysis(name="build-perl-libs-out-analyse"))
+    def execute(self, settings):
+        stdout = BashService.exec_ant_task(ant_build_path=settings.get_tools_mappings_dir(),
+                                           ant_lib_path=settings.get_ant_lib_dir(),
+                                           ant_target="db-mappings-update",
+                                           prop_file=EnvService.get_np_dataload_prop_filename())
+        return stdout, settings.get_log_dir()+"/db-mappings-update_"+time.strftime("%Y%m%d-%H%M%S")+".log"
 
-    build_scala_parser_jars = linear_flow.Flow('build-scala-parser-jars-flow')
-    build_scala_parser_jars.add(BuildScalaParserJars(inject={'settings': settings}))
-    build_scala_parser_jars.add(LogTask(name="build-scala-parser-jars-out-log"))
-    build_scala_parser_jars.add(OutputAnalysis(name="build-scala-parser-jars-out-analyse"))
 
-    build_mapping_jar = linear_flow.Flow('build-mappings-jar-flow')
-    build_mapping_jar.add(ToolsMappingsBuildJar(inject={'settings': settings}))
-    build_mapping_jar.add(LogTask(name="build-mappings-jar-out-log"))
-    build_mapping_jar.add(OutputAnalysis(name="build-mappings-jar-out-analyse"))
+class CodeBuildingFlowFactory(AbstractFlowFactory):
+    def __init__(self, settings):
+        super(CodeBuildingFlowFactory, self).__init__()
+        self._settings = settings
 
-    build_flow = linear_flow.Flow('code-building-flow')
-    build_flow.add(make_git_update_flow(settings=settings))
-    build_flow.add(unordered_flow.Flow('unordered-builds').add(
-        build_integration_jars,
-        build_perl_libs,
-        build_scala_parser_jars,
-        build_mapping_jar))
+    def create_flow(self):
+        """
+        update-code-repos
+         │
+         `──> build-code
+         │       │
+         │       `──> build-integration-jars --(output,logfile)--> store output in log file --(output)--> analysis output
+         │       │
+         │       └──> build-perl-libs --(output,logfile)--> store output in log file --(output)--> analysis output
+         │       │
+         │       `──> build-scala-parser-jars --(output,logfile)--> store output in log file --(output)--> analysis output
+         │       │
+         │       `──> build-mappings-jar --(output,logfile)--> store output in log file --(output)--> analysis output
+         │
+         `──> update-dbs
+                 │
+                 `──> update_db_integration --(output,logfile)--> store output in log file --(output)--> analysis output
+                 │
+                 `──> update_db_mappings --(output,logfile)--> store output in log file --(output)--> analysis output
+        """
+        return linear_flow.Flow('code-building-flow').add(
+            self._new_git_update_flow(),
+            unordered_flow.Flow('code-builds').add(
+                self._new_build_integration_jars_flow(),
+                self._new_build_perl_libs_flow(),
+                self._new_build_scala_parser_jars_flow(),
+                self._new_build_mapping_jar_flow()),
+            linear_flow.Flow('update-dbs').add(
+                self._new_update_db_integration_flow(),
+                self._new_update_db_mappings_flow()
+            )
+        )
 
-    return build_flow
+    def _new_git_update_flow(self):
+        """update repositories nextprot-perl-parsers and nextprot-loaders
+        """
+        lf = linear_flow.Flow("update-repos")
+
+        for repo_path in [EnvService.get_np_perl_parsers_home(), EnvService.get_np_loaders_home()]:
+            lf.add(GitUpdate(name='git-update-%s' % repo_path.rsplit('/', 1)[1],
+                             inject={'git_repo_path': repo_path, 'settings': self._settings}))
+        return lf
+
+    def _new_build_integration_jars_flow(self):
+
+        build_integration_jars = linear_flow.Flow('build-integration-jars-flow')
+        build_integration_jars.add(ToolsIntegrationBuildJars(inject={'settings': self._settings}))
+        build_integration_jars.add(LogTask(name="build-integration-jars-out-log"))
+        build_integration_jars.add(OutputAnalysis(name="build-integration-jars-out-analyse"))
+
+        return build_integration_jars
+
+    def _new_build_perl_libs_flow(self):
+
+        build_perl_libs = linear_flow.Flow('build-perl-libs-flow')
+        build_perl_libs.add(ToolsIntegrationBuildPerlLibs(inject={'settings': self._settings}))
+        build_perl_libs.add(LogTask(name="build-perl-libs-out-log"))
+        build_perl_libs.add(OutputAnalysis(name="build-perl-libs-out-analyse"))
+
+        return build_perl_libs
+
+    def _new_build_scala_parser_jars_flow(self):
+
+        build_scala_parser_jars = linear_flow.Flow('build-scala-parser-jars-flow')
+        build_scala_parser_jars.add(BuildScalaParserJars(inject={'settings': self._settings}))
+        build_scala_parser_jars.add(LogTask(name="build-scala-parser-jars-out-log"))
+        build_scala_parser_jars.add(OutputAnalysis(name="build-scala-parser-jars-out-analyse"))
+
+        return build_scala_parser_jars
+
+    def _new_build_mapping_jar_flow(self):
+
+        build_mapping_jar = linear_flow.Flow('build-mappings-jar-flow')
+        build_mapping_jar.add(ToolsMappingsBuildJar(inject={'settings': self._settings}))
+        build_mapping_jar.add(LogTask(name="build-mappings-jar-out-log"))
+        build_mapping_jar.add(OutputAnalysis(name="build-mappings-jar-out-analyse"))
+
+        return build_mapping_jar
+
+    def _new_update_db_integration_flow(self):
+
+        update_db_integration = linear_flow.Flow('update-db-integration-flow')
+        update_db_integration.add(DbIntegrationUpdate(inject={'settings': self._settings}))
+        update_db_integration.add(LogTask(name="update-db-integration-out-log"))
+        update_db_integration.add(OutputAnalysis(name="update_db_integration-out-analyse"))
+
+        return update_db_integration
+
+    def _new_update_db_mappings_flow(self):
+
+        update_db_mappings = linear_flow.Flow('update-db-mappings-flow')
+        update_db_mappings.add(DbMappingsUpdate(inject={'settings': self._settings}))
+        update_db_mappings.add(LogTask(name="update-db-mappings-out-log"))
+        update_db_mappings.add(OutputAnalysis(name="update-db-mappings-out-analyse"))
+
+        return update_db_mappings
+

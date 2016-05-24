@@ -2,7 +2,7 @@
 import argparse
 import logging
 
-from nextprot_integration.flow.buildcode import make_build_code_flow
+from nextprot_integration.flow.buildcode import CodeBuildingFlowFactory
 from nextprot_integration.service.jprop import JavaPropertyMap
 from nextprot_integration.service.pgdb import DatabaseService
 from nextprot_integration.service.prerequisite import SoftwareCheckr, EnvService
@@ -100,8 +100,7 @@ def task_watch(state, details):
 def make_main_flow():
 
     main_flow = linear_flow.Flow('integration-flow')
-    # load.xls/uniprot: building jars and perl libs
-    main_flow.add(make_build_code_flow(Settings(dev_mode=False)))
+    main_flow.add(CodeBuildingFlowFactory(Settings(dev_mode=False)).create_flow())
 
     return main_flow
 
@@ -144,9 +143,4 @@ if __name__ == '__main__':
             else:
                 print("%s" % path)
 
-    #workflow.restore_db_schema(db_schema="np_mappings", )
-    #workflow.update_db_schema(update_type="integration")
-    #workflow.update_db_schema(update_type="mappings")
-    #workflow.dump_db_schema(db_schema="nextprot")
-    #workflow.dump_db_schema(db_schema="np_mappings")
 
