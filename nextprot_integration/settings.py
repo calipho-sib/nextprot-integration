@@ -44,6 +44,9 @@ class Settings(object):
     def get_jar_repository_path(self):
         return self.__java_props.get_property("jar.repository.path")
 
+    def get_perl_install_path(self):
+        return self.__java_props.get_property("perl.install.dir")
+
     def get_ant_lib_dir(self):
         return self.__java_props.get_property("ant.lib.dir")
 
