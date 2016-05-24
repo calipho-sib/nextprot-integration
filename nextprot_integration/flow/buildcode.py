@@ -13,6 +13,8 @@ from taskflow.patterns import linear_flow, unordered_flow
 
 class GitUpdate(task.Task):
     """Update git repository to the latest commit.
+
+    [Note about code from load.xls/uniprot: line 10-13]
     """
     default_provides = ('stdout', 'stderr')
 
@@ -71,6 +73,11 @@ class LogTask(task.Task):
 
 class ToolsIntegrationBuildJars(task.Task):
     """build and install tools integration jars in proper place
+
+    [Note about code from load.xls/uniprot (line 15-17)]:
+      'install-code' target was splitted in:
+     - 'install-jars' (this task)
+     - 'install-perl' (see ToolsIntegrationBuildPerlLibs)
     """
     default_provides = ('stdout', 'log_file_path')
 
@@ -89,6 +96,11 @@ class ToolsIntegrationBuildJars(task.Task):
 
 class ToolsIntegrationBuildPerlLibs(task.Task):
     """install perl dependencies, build and deploy perl libs found in repo ${np.parser.pl}
+
+    [Note about code from load.xls/uniprot (line 15-17)]:
+      'install-code' target was splitted in:
+     - 'install-perl' (this task)
+     - 'install-jars' (see ToolsIntegrationBuildJars)
     """
     default_provides = ('stdout', 'log_file_path')
 
@@ -107,9 +119,11 @@ class ToolsIntegrationBuildPerlLibs(task.Task):
 class BuildScalaParserJars(task.Task):
     """build scala parser jars
 
+    [Note about code from load.xls/uniprot (line 15,16,19)]
+
     Side Effect: deploys jars in settings.get_tools_integration_dir()/target:
-        - integration-1.0-jar-with-dependencies.jar
-        - integration-1.0.jar
+     - integration-1.0-jar-with-dependencies.jar
+     - integration-1.0.jar
     """
     default_provides = ('stdout', 'log_file_path')
 
@@ -127,8 +141,10 @@ class BuildScalaParserJars(task.Task):
 class ToolsMappingsBuildJar(task.Task):
     """build and install tools mappings jar in proper place
 
+    [Note about code from load.xls/uniprot (line 21,22)]
+
     Side Effect: deploys jar in EnvService.get_np_loaders_home()/com.genebio.nextprot.genemapping.datamodel/target:
-        - com.genebio.nextprot.genemapping.datamodel.jar
+     - com.genebio.nextprot.genemapping.datamodel.jar
     """
     default_provides = ('stdout', 'log_file_path')
 
