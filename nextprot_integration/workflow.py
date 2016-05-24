@@ -8,6 +8,7 @@ from nextprot_integration.service.pgdb import DatabaseService
 from nextprot_integration.service.prerequisite import SoftwareCheckr, EnvService
 import taskflow.engines
 from taskflow.listeners import timing
+from taskflow.patterns import linear_flow
 from taskflow.types import notifier
 
 ANY = notifier.Notifier.ANY
@@ -96,8 +97,12 @@ def task_watch(state, details):
     print('Task %s => %s' % (details.get('task_name'), state))
 
 
-def make_flow():
-    return make_build_code_flow(Settings(dev_mode=True))
+def make_main_flow():
+
+    main_flow = linear_flow.Flow('integration-flow')
+    main_flow.add(make_build_code_flow(Settings(dev_mode=True)))
+
+    return main_flow
 
 
 if __name__ == '__main__':
@@ -105,9 +110,9 @@ if __name__ == '__main__':
 
     print_wrapped('Running all tasks:')
 
-    gf = make_flow()
+    mf = make_main_flow()
 
-    e = taskflow.engines.load(gf, engine='serial')
+    e = taskflow.engines.load(mf, engine='serial')
     # This registers all (ANY) state transitions to trigger a call to the
     # flow_watch function for flow state transitions, and registers the
     # same all (ANY) state transitions for task state transitions.
