@@ -1,13 +1,13 @@
 # coding=utf-8
-import os
-import time
 import shutil
-import re
-from nextprot_integration.flow.flows import AbstractFlowFactory
+import time
 
+import os
+import re
 from nextprot_integration.service.git import GitService
 from nextprot_integration.service.prerequisite import EnvService
 from nextprot_integration.service.shell import BashService
+from nextprot_integration.utils.flow_utils import AbstractFlowFactory
 from taskflow import task
 from taskflow.patterns import linear_flow, unordered_flow
 

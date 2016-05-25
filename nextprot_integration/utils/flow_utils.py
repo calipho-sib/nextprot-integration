@@ -11,3 +11,4 @@ class AbstractFlowFactory(object):
     def create_flow(self):
         """create TaskFlow instance"""
         pass
+

@@ -2,11 +2,13 @@
 import argparse
 import logging
 
+import nextprot_integration.utils.engine_utils as eu  # noqa
+import taskflow.engines
 from nextprot_integration.flow.buildcode import CodeBuildingFlowFactory
 from nextprot_integration.service.jprop import JavaPropertyMap
 from nextprot_integration.service.pgdb import DatabaseService
 from nextprot_integration.service.prerequisite import SoftwareCheckr, EnvService
-import taskflow.engines
+from taskflow import states
 from taskflow.listeners import timing
 from taskflow.patterns import linear_flow
 from taskflow.types import notifier
@@ -83,12 +85,6 @@ def parse_args():
     return parser.parse_args()
 
 
-def print_wrapped(text):
-    print("-" * (len(text)))
-    print(text)
-    print("-" * (len(text)))
-
-
 def flow_watch(state, details):
     print("Flow '%s' transition to state %s" % (details['flow_name'], state))
 
@@ -97,7 +93,10 @@ def task_watch(state, details):
     print('Task %s => %s' % (details.get('task_name'), state))
 
 
-def make_main_flow():
+FINISHED_STATES = (states.SUCCESS, states.FAILURE, states.REVERTED)
+
+
+def integration_flow_factory():
 
     main_flow = linear_flow.Flow('integration-flow')
     main_flow.add(CodeBuildingFlowFactory().create_flow())
@@ -105,25 +104,44 @@ def make_main_flow():
     return main_flow
 
 
-if __name__ == '__main__':
-    args = parse_args()
-    settings = Settings(dev_mode=False)
+def resume(flowdetail, backend):
+    print('Resuming flow %s %s' % (flowdetail.name, flowdetail.uuid))
+    e = taskflow.engines.load_from_detail(flow_detail=flowdetail,
+                                          backend=backend)
+    e.run()
 
-    print_wrapped('Running all tasks:')
 
-    mf = make_main_flow()
+def run_with_persistence(settings, flow_factory):
 
-    e = taskflow.engines.load(mf, engine='serial', store={'settings': settings})
+    with eu.get_backend() as backend:
+
+        book, flow_detail = eu.create_log_book_and_flow_details(backend)
+
+        # CREATE AND RUN THE FLOW: FIRST ATTEMPT ####################
+
+        engine = taskflow.engines.load(flow_factory, flow_detail=flow_detail,
+                                       book=book, backend=backend)
+
+        eu.print_task_states(flow_detail, "At the beginning, there is no state")
+        eu.print_wrapped("Running")
+        engine.run()
+        eu.print_task_states(flow_detail, "After running")
+
+
+def run_with_timing(settings):
+
+    engine = taskflow.engines.load(integration_flow_factory(),
+                                   engine='serial', store={'settings': settings})
     # This registers all (ANY) state transitions to trigger a call to the
     # flow_watch function for flow state transitions, and registers the
     # same all (ANY) state transitions for task state transitions.
-    e.notifier.register(ANY, flow_watch)
-    e.atom_notifier.register(ANY, task_watch)
+    engine.notifier.register(ANY, flow_watch)
+    engine.atom_notifier.register(ANY, task_watch)
 
-    e.compile()
-    e.prepare()
+    engine.compile()
+    engine.prepare()
     # After prepare the storage layer + backend can now be accessed safely...
-    backend = e.storage.backend
+    backend = engine.storage.backend
 
     print("----------")
     print("Before run")
@@ -131,8 +149,10 @@ if __name__ == '__main__':
     print(backend.memory.pformat())
     print("----------")
 
-    with timing.PrintingDurationListener(e):
-        e.run()
+    with timing.PrintingDurationListener(engine):
+        print('Running flow %s %s' % (engine.storage.flow_name,
+                                      engine.storage.flow_uuid))
+        engine.run()
 
         print("---------")
         print("After run")
@@ -143,5 +163,14 @@ if __name__ == '__main__':
                 print("%s -> %s" % (path, value))
             else:
                 print("%s" % path)
+
+if __name__ == '__main__':
+    eu.print_wrapped('Running all tasks:')
+
+    run_with_timing(settings=Settings(dev_mode=False))
+    #run_with_persistence(settings=Settings(dev_mode=False), flow_factory=integration_flow_factory())
+
+
+
 
 
