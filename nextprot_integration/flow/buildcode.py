@@ -194,9 +194,6 @@ class DbMappingsUpdate(task.Task):
 
 
 class CodeBuildingFlowFactory(AbstractFlowFactory):
-    #def __init__(self, settings):
-    #    super(CodeBuildingFlowFactory, self).__init__()
-    #    self._settings = settings
 
     def create_flow(self):
         """
