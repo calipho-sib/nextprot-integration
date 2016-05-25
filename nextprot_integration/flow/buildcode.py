@@ -30,14 +30,6 @@ class GitUpdate(task.Task):
         return result.stdout, result.stderr
 
 
-class FakeErrorTask(task.Task):
-    """Always raise a ValueError
-    """
-
-    def execute(self, stdout):
-        raise ValueError("Raising a fake error")
-
-
 class OutputAnalysis(task.Task):
     """Consume and analyse stdout of the previous task
     raise a ValueError if stdout is invalid
