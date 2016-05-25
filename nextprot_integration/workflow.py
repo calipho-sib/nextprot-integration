@@ -100,19 +100,20 @@ def task_watch(state, details):
 def make_main_flow():
 
     main_flow = linear_flow.Flow('integration-flow')
-    main_flow.add(CodeBuildingFlowFactory(Settings(dev_mode=False)).create_flow())
+    main_flow.add(CodeBuildingFlowFactory().create_flow())
 
     return main_flow
 
 
 if __name__ == '__main__':
     args = parse_args()
+    settings = Settings(dev_mode=False)
 
     print_wrapped('Running all tasks:')
 
     mf = make_main_flow()
 
-    e = taskflow.engines.load(mf, engine='serial')
+    e = taskflow.engines.load(mf, engine='serial', store={'settings': settings})
     # This registers all (ANY) state transitions to trigger a call to the
     # flow_watch function for flow state transitions, and registers the
     # same all (ANY) state transitions for task state transitions.

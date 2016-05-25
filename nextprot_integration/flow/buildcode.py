@@ -194,9 +194,9 @@ class DbMappingsUpdate(task.Task):
 
 
 class CodeBuildingFlowFactory(AbstractFlowFactory):
-    def __init__(self, settings):
-        super(CodeBuildingFlowFactory, self).__init__()
-        self._settings = settings
+    #def __init__(self, settings):
+    #    super(CodeBuildingFlowFactory, self).__init__()
+    #    self._settings = settings
 
     def create_flow(self):
         """
@@ -238,13 +238,13 @@ class CodeBuildingFlowFactory(AbstractFlowFactory):
 
         for repo_path in [EnvService.get_np_perl_parsers_home(), EnvService.get_np_loaders_home()]:
             lf.add(GitUpdate(name='git-update-%s' % repo_path.rsplit('/', 1)[1],
-                             inject={'git_repo_path': repo_path, 'settings': self._settings}))
+                             inject={'git_repo_path': repo_path}))
         return lf
 
     def _new_build_integration_jars_flow(self):
 
         build_integration_jars = linear_flow.Flow('build-integration-jars-flow')
-        build_integration_jars.add(ToolsIntegrationBuildJars(inject={'settings': self._settings}))
+        build_integration_jars.add(ToolsIntegrationBuildJars())
         build_integration_jars.add(LogTask(name="build-integration-jars-out-log"))
         build_integration_jars.add(OutputAnalysis(name="build-integration-jars-out-analyse"))
 
@@ -253,7 +253,7 @@ class CodeBuildingFlowFactory(AbstractFlowFactory):
     def _new_build_perl_libs_flow(self):
 
         build_perl_libs = linear_flow.Flow('build-perl-libs-flow')
-        build_perl_libs.add(ToolsIntegrationBuildPerlLibs(inject={'settings': self._settings}))
+        build_perl_libs.add(ToolsIntegrationBuildPerlLibs())
         build_perl_libs.add(LogTask(name="build-perl-libs-out-log"))
         build_perl_libs.add(OutputAnalysis(name="build-perl-libs-out-analyse"))
 
@@ -262,7 +262,7 @@ class CodeBuildingFlowFactory(AbstractFlowFactory):
     def _new_build_scala_parser_jars_flow(self):
 
         build_scala_parser_jars = linear_flow.Flow('build-scala-parser-jars-flow')
-        build_scala_parser_jars.add(BuildScalaParserJars(inject={'settings': self._settings}))
+        build_scala_parser_jars.add(BuildScalaParserJars())
         build_scala_parser_jars.add(LogTask(name="build-scala-parser-jars-out-log"))
         build_scala_parser_jars.add(OutputAnalysis(name="build-scala-parser-jars-out-analyse"))
 
@@ -271,7 +271,7 @@ class CodeBuildingFlowFactory(AbstractFlowFactory):
     def _new_build_mapping_jar_flow(self):
 
         build_mapping_jar = linear_flow.Flow('build-mappings-jar-flow')
-        build_mapping_jar.add(ToolsMappingsBuildJar(inject={'settings': self._settings}))
+        build_mapping_jar.add(ToolsMappingsBuildJar())
         build_mapping_jar.add(LogTask(name="build-mappings-jar-out-log"))
         build_mapping_jar.add(OutputAnalysis(name="build-mappings-jar-out-analyse"))
 
@@ -280,7 +280,7 @@ class CodeBuildingFlowFactory(AbstractFlowFactory):
     def _new_update_db_integration_flow(self):
 
         update_db_integration = linear_flow.Flow('update-db-integration-flow')
-        update_db_integration.add(DbIntegrationUpdate(inject={'settings': self._settings}))
+        update_db_integration.add(DbIntegrationUpdate())
         update_db_integration.add(LogTask(name="update-db-integration-out-log"))
         update_db_integration.add(OutputAnalysis(name="update_db_integration-out-analyse"))
 
@@ -289,7 +289,7 @@ class CodeBuildingFlowFactory(AbstractFlowFactory):
     def _new_update_db_mappings_flow(self):
 
         update_db_mappings = linear_flow.Flow('update-db-mappings-flow')
-        update_db_mappings.add(DbMappingsUpdate(inject={'settings': self._settings}))
+        update_db_mappings.add(DbMappingsUpdate())
         update_db_mappings.add(LogTask(name="update-db-mappings-out-log"))
         update_db_mappings.add(OutputAnalysis(name="update-db-mappings-out-analyse"))
 
