@@ -109,11 +109,11 @@ def print_task_states(flowdetail, msg):
         print(" %s==%s: %s, result=%s" % item)
 
 
-def create_log_book_and_flow_details(backend):
+def create_log_book_and_flow_details(book_name, backend):
 
     # Create a place where the persistence information will be stored.
-    book = models.LogBook("workflow-integration")
-    flow_detail = models.FlowDetail("resume from backend workflow-integration",
+    book = models.LogBook(name=book_name)
+    flow_detail = models.FlowDetail("resume from backend "+book_name,
                                     uuid=uuidutils.generate_uuid())
     book.add(flow_detail)
     with contextlib.closing(backend.get_connection()) as conn:
