@@ -111,16 +111,23 @@ def resume(flowdetail, backend):
     e.run()
 
 
-def run_with_persistence(settings, flow_factory):
+# TODO: needs to be fixed
+def run_with_persistence(flow_factory, store):
 
     with eu.get_backend() as backend:
 
-        book, flow_detail = eu.create_log_book_and_flow_details(backend)
+        print("----------")
+        print("Before run")
+        print("----------")
+        print(backend.pformat())
+        print("----------")
 
+        book, flow_detail = eu.create_log_book_and_flow_details(book_name="workflow-integration",
+                                                                backend=backend)
         # CREATE AND RUN THE FLOW: FIRST ATTEMPT ####################
 
         engine = taskflow.engines.load(flow_factory, flow_detail=flow_detail,
-                                       book=book, backend=backend)
+                                       book=book, backend=backend, store=store)
 
         eu.print_task_states(flow_detail, "At the beginning, there is no state")
         eu.print_wrapped("Running")
@@ -128,10 +135,9 @@ def run_with_persistence(settings, flow_factory):
         eu.print_task_states(flow_detail, "After running")
 
 
-def run_with_timing(settings):
+def run_with_timing(store):
 
-    engine = taskflow.engines.load(integration_flow_factory(),
-                                   engine='serial', store={'settings': settings})
+    engine = taskflow.engines.load(integration_flow_factory(), engine='serial', store=store)
     # This registers all (ANY) state transitions to trigger a call to the
     # flow_watch function for flow state transitions, and registers the
     # same all (ANY) state transitions for task state transitions.
@@ -167,8 +173,9 @@ def run_with_timing(settings):
 if __name__ == '__main__':
     eu.print_wrapped('Running all tasks:')
 
-    run_with_timing(settings=Settings(dev_mode=False))
-    #run_with_persistence(settings=Settings(dev_mode=False), flow_factory=integration_flow_factory())
+    run_with_timing(store={'settings': Settings(dev_mode=False)})
+    #run_with_persistence(flow_factory=integration_flow_factory(),
+                         #store={'settings': Settings(dev_mode=False)})
 
 
 
