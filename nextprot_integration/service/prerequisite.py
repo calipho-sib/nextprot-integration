@@ -4,6 +4,17 @@ from shell import BashService
 
 
 class EnvService:
+
+    py_integration_home = "PY_INTEGRATION_HOME"
+    np_loaders_home = "NP_LOADERS_HOME"
+    np_cv_home = "NP_CV_HOME"
+    np_perl_parsers_home = "NP_PERL_PARSERS_HOME"
+    perl5lib = "PERL5LIB"
+    npdb_data = "NPDB_DATA"
+
+    required_envs = [py_integration_home, np_loaders_home, np_cv_home,
+                     np_perl_parsers_home, perl5lib, npdb_data]
+
     """
     This class checks environment variables required for processing workflow
     """
@@ -12,8 +23,7 @@ class EnvService:
 
     @staticmethod
     def check_all_required_nextprot_envs():
-        np_var_names = ["PY_INTEGRATION_HOME", "NP_LOADERS_HOME", "NP_CV_HOME", "NP_PERL_PARSERS_HOME", "PERL5LIB"]
-        EnvService.check_envs(np_var_names)
+        EnvService.check_envs(EnvService.required_envs)
 
     @staticmethod
     def check_envs(var_names):
@@ -26,11 +36,11 @@ class EnvService:
 
     @staticmethod
     def get_py_integration_home():
-        return os.getenv("PY_INTEGRATION_HOME")
+        return os.getenv(EnvService.py_integration_home)
 
     @staticmethod
     def get_np_loaders_home():
-        return os.getenv("NP_LOADERS_HOME")
+        return os.getenv(EnvService.np_loaders_home)
 
     @staticmethod
     def get_np_dataload_prop_filename():
@@ -38,15 +48,19 @@ class EnvService:
 
     @staticmethod
     def get_np_perl_parsers_home():
-        return os.getenv("NP_PERL_PARSERS_HOME")
+        return os.getenv(EnvService.np_perl_parsers_home)
 
     @staticmethod
     def get_np_cv_home():
-        return os.getenv("NP_CV_HOME")
+        return os.getenv(EnvService.np_cv_home)
 
     @staticmethod
     def get_nextprot_perl5_lib():
-        return os.getenv("PERL5LIB")+"/NextProt"
+        return os.getenv(EnvService.perl5lib)+"/NextProt"
+
+    @staticmethod
+    def get_npdb_data():
+        return os.getenv(EnvService.npdb_data)
 
 
 class SoftwareCheckr:

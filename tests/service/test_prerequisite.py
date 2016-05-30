@@ -47,6 +47,10 @@ class TestSoftwareCheckr(TestCase):
         with self.assertRaises(OSError):
             EnvService.check_envs(var_names)
 
+    def test_npdb_var(self):
+        var_names = ["NPDB_DATA"]
+        EnvService.check_envs(var_names)
+
     def test_python(self):
         print("path=%s" % os.getenv("PATH"))
         SoftwareCheckr.check_python_software()
@@ -63,3 +67,4 @@ class TestSoftwareCheckr(TestCase):
         self.assertIsNotNone(EnvService.get_np_cv_home())
         self.assertIsNotNone(EnvService.get_nextprot_perl5_lib())
         self.assertTrue(EnvService.get_nextprot_perl5_lib().endswith("/NextProt"))
+        self.assertIsNotNone(EnvService.get_npdb_data())
