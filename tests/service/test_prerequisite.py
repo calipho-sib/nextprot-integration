@@ -47,8 +47,8 @@ class TestSoftwareCheckr(TestCase):
         with self.assertRaises(OSError):
             EnvService.check_envs(var_names)
 
-    def test_npdb_var(self):
-        var_names = ["NPDB_DATA"]
+    def test_npdb_vars(self):
+        var_names = ["NPDB_LAST_RELEASE", "NPDB_CURRENT_SNAPSHOT", "NPDB_LAST_SNAPSHOT"]
         EnvService.check_envs(var_names)
 
     def test_python(self):
@@ -60,11 +60,13 @@ class TestSoftwareCheckr(TestCase):
 
     def test_all(self):
         EnvService.check_all_required_nextprot_envs()
-        self.assertIsNotNone(EnvService.get_py_integration_home())
-        self.assertIsNotNone(EnvService.get_np_loaders_home())
-        self.assertIsNotNone(EnvService.get_np_dataload_prop_filename())
-        self.assertIsNotNone(EnvService.get_np_perl_parsers_home())
-        self.assertIsNotNone(EnvService.get_np_cv_home())
-        self.assertIsNotNone(EnvService.get_nextprot_perl5_lib())
+        self.assertTrue(os.path.isdir(str(EnvService.get_py_integration_home())))
+        self.assertTrue(os.path.isdir(str(EnvService.get_np_loaders_home())))
+        self.assertTrue(os.path.isfile(str(EnvService.get_np_dataload_prop_filename())))
+        self.assertTrue(os.path.isdir(str(EnvService.get_np_perl_parsers_home())))
+        self.assertTrue(os.path.isdir(str(EnvService.get_np_cv_home())))
+        self.assertTrue(os.path.isdir(str(EnvService.get_nextprot_perl5_lib())))
         self.assertTrue(EnvService.get_nextprot_perl5_lib().endswith("/NextProt"))
-        self.assertIsNotNone(EnvService.get_npdb_data())
+        self.assertTrue(os.path.isdir(str(EnvService.get_npdb_current_snapshot_data())))
+        self.assertTrue(os.path.isdir(str(EnvService.get_npdb_last_release_data())))
+        self.assertTrue(os.path.isdir(str(EnvService.get_npdb_last_snapshot_data())))

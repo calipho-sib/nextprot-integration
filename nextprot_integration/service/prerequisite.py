@@ -10,10 +10,13 @@ class EnvService:
     np_cv_home = "NP_CV_HOME"
     np_perl_parsers_home = "NP_PERL_PARSERS_HOME"
     perl5lib = "PERL5LIB"
-    npdb_data = "NPDB_DATA"
+    npdb_last_release = "NPDB_LAST_RELEASE"
+    npdb_current_snapshot = "NPDB_CURRENT_SNAPSHOT"
+    npdb_last_snapshot = "NPDB_LAST_SNAPSHOT"
 
     required_envs = [py_integration_home, np_loaders_home, np_cv_home,
-                     np_perl_parsers_home, perl5lib, npdb_data]
+                     np_perl_parsers_home, perl5lib, npdb_last_release,
+                     npdb_current_snapshot, npdb_last_snapshot]
 
     """
     This class checks environment variables required for processing workflow
@@ -59,8 +62,16 @@ class EnvService:
         return os.getenv(EnvService.perl5lib)+"/NextProt"
 
     @staticmethod
-    def get_npdb_data():
-        return os.getenv(EnvService.npdb_data)
+    def get_npdb_last_release_data():
+        return os.getenv(EnvService.npdb_last_release)
+
+    @staticmethod
+    def get_npdb_current_snapshot_data():
+        return os.getenv(EnvService.npdb_current_snapshot)
+
+    @staticmethod
+    def get_npdb_last_snapshot_data():
+        return os.getenv(EnvService.npdb_last_snapshot)
 
 
 class SoftwareCheckr:
