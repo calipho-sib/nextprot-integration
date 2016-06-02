@@ -48,7 +48,7 @@ class TestSoftwareCheckr(TestCase):
             EnvService.check_envs(var_names)
 
     def test_npdb_vars(self):
-        var_names = ["NPDB_LAST_RELEASE", "NPDB_CURRENT_SNAPSHOT", "NPDB_LAST_SNAPSHOT"]
+        var_names = ["NPDB_DATA", "NPDB_INITIAL_SNAPSHOT", "NPDB_LAST_SNAPSHOT"]
         EnvService.check_envs(var_names)
 
     def test_python(self):
@@ -67,6 +67,6 @@ class TestSoftwareCheckr(TestCase):
         self.assertTrue(os.path.isdir(str(EnvService.get_np_cv_home())))
         self.assertTrue(os.path.isdir(str(EnvService.get_nextprot_perl5_lib())))
         self.assertTrue(EnvService.get_nextprot_perl5_lib().endswith("/NextProt"))
-        self.assertTrue(os.path.isdir(str(EnvService.get_npdb_current_snapshot_data())))
-        self.assertTrue(os.path.isdir(str(EnvService.get_npdb_last_release_data())))
+        self.assertTrue(os.path.isdir(str(EnvService.get_npdb_data())))
+        self.assertTrue(os.path.isdir(str(EnvService.get_npdb_initial_snapshot_data())))
         self.assertTrue(os.path.isdir(str(EnvService.get_npdb_last_snapshot_data())))
