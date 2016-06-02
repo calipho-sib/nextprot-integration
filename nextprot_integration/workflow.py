@@ -6,7 +6,7 @@ import nextprot_integration.utils.engine_utils as eu  # noqa
 import taskflow.engines
 from nextprot_integration.flow.buildcode import CodeBuildingFlowFactory
 from nextprot_integration.service.jprop import JavaPropertyMap
-from nextprot_integration.service.pgdb import DatabaseService
+from nextprot_integration.service.npdb import DatabaseService
 from nextprot_integration.service.prerequisite import SoftwareCheckr, EnvService
 from taskflow import states
 from taskflow.listeners import timing

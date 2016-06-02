@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from nextprot_integration.service.pgdb import DatabaseService
+from nextprot_integration.service.npdb import DatabaseService
 
 
 class TestDatabaseService(TestCase):

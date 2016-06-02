@@ -1,6 +1,8 @@
 import os
 import psycopg2
 import logging
+
+from nextprot_integration.service.prerequisite import EnvService
 from shell import BashService
 
 
@@ -167,3 +169,74 @@ class Database(object):
         shell_result = BashService.exec_bash(command)
         if shell_result.has_error():
             raise ValueError("unable to restore database schema '" + schema_name + "': " + shell_result.stderr)
+
+
+# TODO!!!!!!!!!!!!!!!!!!!!! Gives real implementations for any of the methods
+class DatabaseBackup(object):
+    """Responsible to save current snapshot or last_release and restore the last snapshot
+    """
+
+    def __init__(self, settings):
+
+        self.__prepare_fs()
+
+    def __prepare_fs(self):
+        """Make directories to store npdb data snapshots and last release
+        """
+
+        if not os.path.isdir(EnvService.get_npdb_data()):
+            raise ValueError("missing nextprot database location")
+
+        # mkdir the following dirs if missing
+        EnvService.get_npdb_last_snapshot_data()
+        EnvService.get_npdb_initial_snapshot_data()
+
+    def is_postgresql_running(self, pgdata):
+        """
+        :return: True if server is running else False
+        """
+        pass
+
+    def start_postgresql(self):
+        """Start PostgreSQL server on current snapshot
+        """
+        if not self.is_postgresql_running(pgdata=EnvService.get_npdb_data()):
+            # pg_ctl -D pgdata start
+            pass
+
+    def stop_postgresql(self, pgdata_list):
+        """Stop PostgreSQL server
+        :param pgdatalist
+        """
+        for pgdata in pgdata_list:
+            if self.is_postgresql_running(pgdata=pgdata):
+                # pg_ctl -D pgdata stop --silent --mode fast or immediate
+                pass
+
+    def _prepare_first_backup(self):
+
+        self.backup_initial_snapshot()
+        self.restore_last_snapshot()
+
+    def backup_initial_snapshot(self):
+        """Backup the actual np data as initial snapshot
+        """
+        self.stop_postgresql(pgdata_list=[EnvService.get_npdb_data(), EnvService.get_npdb_initial_snapshot_data()])
+
+        # rsync --archive --update --verbose EnvService.get_npdb_data() EnvService.get_npdb_initial_snapshot_data()
+
+    def backup_current_snapshot(self):
+        """Backup the current snapshot as last snapshot
+        """
+        self.stop_postgresql(pgdata_list=[EnvService.get_npdb_data(), EnvService.get_npdb_last_snapshot_data()])
+
+        # rsync --delete --archive --update --verbose EnvService.get_npdb_data() EnvService.get_npdb_last_snapshot_data()
+        self.start_postgresql()
+
+    def restore_last_snapshot(self):
+        """Restore the latest snapshot into current
+        """
+        self.stop_postgresql(pgdata_list=[EnvService.get_npdb_data(), EnvService.get_npdb_last_snapshot_data()])
+
+        # rsync --delete --archive --update --verbose EnvService.get_npdb_last_snapshot_data() EnvService.get_npdb_data()
+        self.start_postgresql()
